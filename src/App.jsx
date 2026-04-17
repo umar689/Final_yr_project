@@ -192,33 +192,33 @@ function App() {
   };
 
   // Fetch AI Prediction from Python Backend
-  useEffect(() => {
-    const fetchAiPrediction = async () => {
-      if (!user) return;
-      setIsAiLoading(true);
-      try {
-        const response = await fetch('http://localhost:5000/api/predict', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ temp: 35, humidity: 40 })
-        });
+  const fetchAiPrediction = async () => {
+    if (!user) return;
+    setIsAiLoading(true);
+    try {
+      const response = await fetch('http://127.0.0.1:5001/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ temp: 35, humidity: 40 })
+      });
 
-        if (!response.ok) throw new Error('AI Server error');
+      if (!response.ok) throw new Error('AI Server error');
 
-        const result = await response.json();
-        if (result.prediction) {
-          setAiPrediction(result.prediction);
-          setForecastWeather(result.weather_forecast);
-        }
-      } catch (err) {
-        console.warn("AI Prediction Backend connection failed. Ensure Flask server is running on port 5000.");
-        setAiPrediction(null);
-        setForecastWeather(null);
-      } finally {
-        setIsAiLoading(false);
+      const result = await response.json();
+      if (result.prediction) {
+        setAiPrediction(result.prediction);
+        setForecastWeather(result.weather_forecast);
       }
-    };
+    } catch (err) {
+      console.warn("AI Prediction Backend connection failed.");
+      setAiPrediction("OFFLINE");
+      setForecastWeather(null);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchAiPrediction();
   }, [user]);
 
@@ -359,17 +359,32 @@ function App() {
 
         {/* AI Prediction Card */}
         <motion.div className="card" variants={itemVariants}>
-          <div className="card-title">
-            <Cpu className="text-accent" size={18} />
-            AI Analytics
+          <div className="card-title flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Cpu className="text-accent" size={18} />
+              AI Analytics
+            </div>
+            <button 
+              onClick={() => fetchAiPrediction()} 
+              className="p-1 hover:bg-white/10 rounded-full transition-colors"
+              title="Refresh AI"
+            >
+              <RefreshCw className={`text-muted ${isAiLoading ? 'animate-spin' : ''}`} size={14} />
+            </button>
           </div>
           <div className="card-value">
             {isAiLoading ? (
-              <span className="text-sm animate-pulse">Running AI Model...</span>
+              <span className="text-sm animate-pulse text-accent">Analyzing...</span>
             ) : (
-              aiPrediction || "2.34"
+              aiPrediction === "OFFLINE" ? (
+                <span className="text-sm text-red-400">SERVER OFFLINE</span>
+              ) : (
+                <>
+                  {aiPrediction || "---"}
+                  <span className="unit ml-1">kWh</span>
+                </>
+              )
             )}
-            <span className="unit">kWh</span>
           </div>
           <div className="prediction-box">
             <div className="prediction-label">Next Day Weather Forecast</div>
