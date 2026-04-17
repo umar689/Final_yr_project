@@ -203,6 +203,7 @@ h1.main-title {
 
 .status-dot.on { background: var(--success); box-shadow: 0 0 20px var(--success); }
 .status-dot.off { background: var(--error); box-shadow: 0 0 20px var(--error); }
+.status-dot.offline { background: #6b7280; box-shadow: 0 0 20px rgba(107, 114, 128, 0.5); }
 
 @keyframes pulse {
   0% { transform: scale(1); opacity: 0.3; }

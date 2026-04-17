@@ -137,10 +137,18 @@ function App() {
         console.error("History fetch error:", err);
       });
 
+      // Listen for Heartbeat (Last Seen)
+      const heartbeatRef = ref(db, 'last_seen');
+      const unsubscribeHeartbeat = onValue(heartbeatRef, (snapshot) => {
+        const val = snapshot.val();
+        if (val) setData(prev => ({ ...prev, last_seen: val }));
+      });
+
       return () => {
         unsubscribeUnits();
         unsubscribeStatus();
         unsubscribeHistory();
+        unsubscribeHeartbeat();
       };
     } catch (e) {
       console.error("Firebase Setup Error:", e);
@@ -317,13 +325,27 @@ function App() {
           </div>
           <div className="card-value">
             <div className="status-indicator">
-              <div className={`status-dot ${data.load_status === 'OFF' ? 'off' : 'on'}`}></div>
-              <span className={data.load_status === 'OFF' ? 'text-red-400' : 'text-emerald-400'}>
-                {data.load_status}
-              </span>
+              {/* Check if last_seen is older than 30 seconds */}
+              {Math.floor(Date.now() / 1000) - (data.last_seen || 0) > 30 ? (
+                <>
+                  <div className="status-dot offline"></div>
+                  <span className="text-gray-400">OFFLINE</span>
+                </>
+              ) : (
+                <>
+                  <div className={`status-dot ${data.load_status === 'OFF' ? 'off' : 'on'}`}></div>
+                  <span className={data.load_status === 'OFF' ? 'text-red-400' : 'text-emerald-400'}>
+                    {data.load_status}
+                  </span>
+                </>
+              )}
             </div>
           </div>
-          <p className="text-muted text-sm mt-2">Load is currently {data.load_status.toLowerCase()}</p>
+          <p className="text-muted text-sm mt-2">
+            {Math.floor(Date.now() / 1000) - (data.last_seen || 0) > 30 
+              ? "Hardware connection lost" 
+              : `Load is currently ${data.load_status.toLowerCase()}`}
+          </p>
         </motion.div>
 
         {/* AI Prediction Card */}
