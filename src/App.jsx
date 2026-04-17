@@ -441,22 +441,32 @@ function App() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        <button
-          className="btn-premium btn-on"
-          onClick={() => toggleLoad('ON')}
-          disabled={data.load_status === 'ON'}
-        >
-          <Power size={20} />
-          Restore Power
-        </button>
-        <button
-          className="btn-premium btn-off"
-          onClick={() => toggleLoad('OFF')}
-          disabled={data.load_status === 'OFF'}
-        >
-          <Power size={20} />
-          Emergency Cut
-        </button>
+        {/* Calculate offline status for disabling buttons */}
+        {(() => {
+          const isOffline = Math.floor(Date.now() / 1000) - (data.last_seen || 0) > 30;
+          return (
+            <>
+              <button
+                className="btn-premium btn-on"
+                onClick={() => toggleLoad('ON')}
+                disabled={isOffline || data.load_status === 'ON'}
+                style={{ opacity: (isOffline || data.load_status === 'ON') ? 0.5 : 1, cursor: isOffline ? 'not-allowed' : 'pointer' }}
+              >
+                <Power size={20} />
+                Restore Power
+              </button>
+              <button
+                className="btn-premium btn-off"
+                onClick={() => toggleLoad('OFF')}
+                disabled={isOffline || data.load_status === 'OFF'}
+                style={{ opacity: (isOffline || data.load_status === 'OFF') ? 0.5 : 1, cursor: isOffline ? 'not-allowed' : 'pointer' }}
+              >
+                <Power size={20} />
+                Emergency Cut
+              </button>
+            </>
+          );
+        })()}
       </motion.div>
 
       <footer className="mt-12 text-center text-muted text-sm pb-8">
