@@ -1,46 +1,46 @@
 #include <WiFi.h>
-#include <FirebaseESP32.h>
+#include <Firebase_ESP_Client.h>
 #include <time.h>
 
 // 1. WiFi & Firebase Credentials
-#define WIFI_SSID "YOUR_SSID"
-#define WIFI_PASSWORD "YOUR_PASSWORD"
-#define FIREBASE_HOST "majorproj-ca5fe-default-rtdb.asia-southeast1.firebasedatabase.app"
-#define FIREBASE_AUTH "YOUR_FIREBASE_DATABASE_SECRET" // Firebase Settings > Service Accounts > Database Secrets
+#define WIFI_SSID "Anshoberoi"
+#define WIFI_PASSWORD "7055285262"
+#define DATABASE_URL "https://majorproj-ca5fe-default-rtdb.asia-southeast1.firebasedatabase.app"
+#define DATABASE_SECRET "C0UxRFnnjwzZ6t07Bkl1kIH4VZ1eEiyEPWQSl842"
 
-// 2. Pin Definitions
-const int SENSOR_PIN = 23; 
-const int RELAY_PIN = 5;
-
-// 3. Energy Constants
+// 2. Hardware Pins & Config
+#define SENSOR_PIN 23
+#define RELAY_PIN 5
 const float LOAD_POWER_WATTS = 15.0; // Baseline 15W bulb
+
+// 3. NTP Time Server Config (IST)
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 19800; // IST: GMT + 5:30
+const int   daylightOffset_sec = 0;
+
+// Variables
 float currentUnits = 0.0;
 unsigned long lastMillis = 0;
+String todayDate = "";
 
-// 4. Firebase Objects
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-// NTP Time Settings (IST: GMT + 5:30)
-const char* ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = 19800; 
-const int daylightOffset_sec = 0;
-
 // Helper: Get Current Date (DD-MM-YYYY)
-String getCurrentDate() {
+String getFormattedDate() {
   struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)) return "01-01-2026";
-  char dateChar[11];
-  strftime(dateChar, sizeof(dateChar), "%d-%m-%Y", &timeinfo);
-  return String(dateChar);
+  if(!getLocalTime(&timeinfo)) return "ERROR";
+  char dateStr[11];
+  strftime(dateStr, sizeof(dateStr), "%d-%m-%Y", &timeinfo);
+  return String(dateStr);
 }
 
 void setup() {
   Serial.begin(115200);
   pinMode(SENSOR_PIN, INPUT_PULLUP);
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(RELAY_PIN, HIGH); // OFF initially (Low-level trigger)
 
   // WiFi Connect
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -48,88 +48,108 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi Connected!");
+  Serial.println("\nWiFi Connected ✅");
 
   // Sync NTP Time
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
-  // Firebase Setup
-  config.host = FIREBASE_HOST;
-  config.signer.tokens.legacy_token = FIREBASE_AUTH;
+  // Firebase Setup (Firebase_ESP_Client Syntax)
+  config.database_url = DATABASE_URL;
+  config.signer.tokens.legacy_token = DATABASE_SECRET;
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 
-  // --- SMART STARTUP LOGIC ---
-  String today = getCurrentDate();
+  Serial.println("Checking for Date Change / First Run...");
+  delay(3000); // Wait for NTP sync
+
+  todayDate = getFormattedDate();
+
+  // Load existing units from Firebase
+  if (Firebase.RTDB.getFloat(&fbdo, "/current_units")) {
+    currentUnits = fbdo.floatData();
+  }
+
   String lastDate = "";
-  
-  if (Firebase.getString(fbdo, "/last_recorded_date")) {
+  if (Firebase.RTDB.getString(&fbdo, "/last_recorded_date")) {
     lastDate = fbdo.stringData();
   }
 
-  // Agar aaj ka din badal gaya hai, toh archive karo aur units 0 karo
-  if (lastDate != "" && lastDate != today) {
-    Serial.println("New Day Detected! Archiving old data...");
-    float finalDayUnits = 0;
-    if (Firebase.getFloat(fbdo, "/current_units")) finalDayUnits = fbdo.floatData();
-    
-    // Archive to history
-    Firebase.setFloat(fbdo, "/daily_usage_history/" + lastDate, finalDayUnits);
-    
-    // Reset for new day
-    Firebase.setFloat(fbdo, "/current_units", 0.0);
-    Firebase.setString(fbdo, "/last_recorded_date", today);
-    currentUnits = 0.0;
-  } else {
-    // Purani units fetch karo agar power cut hua tha
-    if (Firebase.getFloat(fbdo, "/current_units")) currentUnits = fbdo.floatData();
-    Firebase.setString(fbdo, "/last_recorded_date", today);
+  // --- STARTUP DATE RESET LOGIC ---
+  if (todayDate != "ERROR") {
+    if (lastDate == "" || todayDate != lastDate) {
+      Serial.println("New Day Detected! Archiving old data...");
+      if (lastDate != "" && currentUnits > 0) {
+        // Archive to history
+        Firebase.RTDB.setFloat(&fbdo, "/daily_usage_history/" + lastDate, currentUnits);
+      }
+      // Reset for new day
+      currentUnits = 0.0;
+      Firebase.RTDB.setFloat(&fbdo, "/current_units", 0.0);
+      Firebase.RTDB.setString(&fbdo, "/last_recorded_date", todayDate);
+    }
   }
 
   lastMillis = millis();
 }
 
 void loop() {
-  // 1. Check Emergency Cut from Dashboard
-  bool emergencyCut = false;
-  if (Firebase.getBool(fbdo, "/emergency_cut")) emergencyCut = fbdo.boolData();
-
-  // 2. Sensor & Relay Logic
-  bool presenceDetected = digitalRead(SENSOR_PIN) == LOW; // Low means object detected
-  
-  if (emergencyCut) {
-    digitalWrite(RELAY_PIN, LOW); // Force OFF
-    Firebase.setString(fbdo, "/load_status", "EMERGENCY_OFF");
-  } else if (presenceDetected) {
-    digitalWrite(RELAY_PIN, HIGH);
-    Firebase.setString(fbdo, "/load_status", "ON");
+  if (Firebase.ready()) {
     
-    // Calculate Energy
-    unsigned long currentMillis = millis();
-    float secondsPassed = (currentMillis - lastMillis) / 1000.0;
-    // Formula: Units (kWh) = (Watts * Hours) / 1000
-    float addedUnits = (LOAD_POWER_WATTS * (secondsPassed / 3600.0)) / 1000.0;
-    currentUnits += addedUnits;
-    lastMillis = currentMillis;
-
-    // Fast Sync to Firebase
-    static unsigned long lastSync = 0;
-    if (millis() - lastSync > 2000) {
-      Firebase.setFloat(fbdo, "/current_units", currentUnits);
-      lastSync = millis();
+    // 1. Date Check (For continuous running beyond midnight)
+    String liveDate = getFormattedDate();
+    if (liveDate != todayDate && liveDate != "ERROR") {
+      Firebase.RTDB.setFloat(&fbdo, "/daily_usage_history/" + todayDate, currentUnits);
+      currentUnits = 0.0;
+      Firebase.RTDB.setFloat(&fbdo, "/current_units", 0.0);
+      todayDate = liveDate;
+      Firebase.RTDB.setString(&fbdo, "/last_recorded_date", todayDate);
     }
-  } else {
-    digitalWrite(RELAY_PIN, LOW);
-    Firebase.setString(fbdo, "/load_status", "OFF");
-    lastMillis = millis(); // Reset timer when off
-  }
 
-  // 3. Heartbeat (30s Dashboard Timeout)
-  static unsigned long lastHb = 0;
-  if (millis() - lastHb > 10000) {
-    lastHb = millis();
-    Firebase.setInt(fbdo, "/last_seen", (int)time(nullptr));
+    // 2. Check Emergency Cut from Dashboard
+    bool emergencyCut = false;
+    if (Firebase.RTDB.getBool(&fbdo, "/emergency_cut")) {
+      emergencyCut = fbdo.boolData();
+    }
+
+    if (emergencyCut) {
+      digitalWrite(RELAY_PIN, HIGH); // Force OFF (Low-level trigger)
+      Firebase.RTDB.setString(&fbdo, "/load_status", "EMERGENCY_OFF");
+    } else {
+      // 3. SENSOR & RELAY LOGIC
+      bool sensorState = digitalRead(SENSOR_PIN);
+
+      // 🔴 Metal touch (HIGH) -> DOOR CLOSED -> OFF
+      if (sensorState == HIGH) {
+        digitalWrite(RELAY_PIN, HIGH); // OFF
+        Firebase.RTDB.setString(&fbdo, "/load_status", "OFF");
+      } 
+      // 🟢 Metal remove (LOW) -> DOOR OPEN -> ON
+      else {
+        digitalWrite(RELAY_PIN, LOW); // ON
+        Firebase.RTDB.setString(&fbdo, "/load_status", "ON");
+
+        // Energy Calculation
+        unsigned long currentMillis = millis();
+        float secondsPassed = (currentMillis - lastMillis) / 1000.0;
+        float addedUnits = (LOAD_POWER_WATTS * (secondsPassed / 3600.0)) / 1000.0;
+        currentUnits += addedUnits;
+        lastMillis = currentMillis;
+
+        // Sync units to Firebase every 2 seconds
+        static unsigned long lastSync = 0;
+        if (millis() - lastSync > 2000) {
+          Firebase.RTDB.setFloat(&fbdo, "/current_units", currentUnits);
+          lastSync = millis();
+        }
+      }
+    }
+
+    // 4. Heartbeat (To prevent "Offline" dashboard status)
+    static unsigned long lastHb = 0;
+    if (millis() - lastHb > 10000) {
+      lastHb = millis();
+      Firebase.RTDB.setInt(&fbdo, "/last_seen", (int)time(nullptr));
+    }
   }
-  
-  delay(100); 
+  delay(100);
 }
