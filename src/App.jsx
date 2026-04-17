@@ -23,7 +23,8 @@ import {
   AlertCircle,
   Cpu,
   LogOut,
-  User
+  User,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
