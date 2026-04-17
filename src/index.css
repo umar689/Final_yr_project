@@ -494,3 +494,48 @@ h1.main-title {
 .font-bold { font-weight: 700; }
 .mb-2 { margin-bottom: 0.5rem; }
 .mb-6 { margin-bottom: 1.5rem; }
+
+/* ─── AI Refresh Button ─────────────────────────────── */
+.ai-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(240, 147, 251, 0.35);
+  background: linear-gradient(135deg, rgba(240,147,251,0.12), rgba(79,172,254,0.12));
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 10px rgba(240,147,251,0.1);
+  backdrop-filter: blur(6px);
+}
+
+.ai-refresh-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(240,147,251,0.25), rgba(79,172,254,0.25));
+  border-color: rgba(240, 147, 251, 0.7);
+  box-shadow: 0 0 18px rgba(240,147,251,0.35);
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.ai-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  color: var(--text-muted);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: none;
+  background: rgba(255,255,255,0.04);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spin-animation {
+  animation: spin 0.8s linear infinite;
+}

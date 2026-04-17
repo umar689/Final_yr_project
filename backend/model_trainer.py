@@ -7,7 +7,9 @@ import joblib
 import os
 
 def train_model():
-    file_path = 'data/aligarh_energy_year_with_meter.xlsx'
+    # Dynamically find the project root
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    file_path = os.path.join(base_dir, 'data', 'aligarh_energy_year_with_meter.xlsx')
     
     if not os.path.exists(file_path):
         print(f"Error: {file_path} not found.")
@@ -27,8 +29,9 @@ def train_model():
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     
-    # Save the model
-    model_path = 'backend/energy_model.pkl'
+    # Save the model in the same directory as this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(script_dir, 'energy_model.pkl')
     joblib.dump(model, model_path)
     print(f"Model saved to {model_path}")
     

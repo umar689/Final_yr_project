@@ -18,14 +18,16 @@ CORS(app)
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 CITY = os.getenv("CITY", "Aligarh")
 
-# Load the AI model
-MODEL_PATH = 'backend/energy_model.pkl'
+# Load the AI model dynamically
+script_dir = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(script_dir, 'energy_model.pkl')
+
 if os.path.exists(MODEL_PATH):
     model = joblib.load(MODEL_PATH)
-    print("Model loaded successfully.")
+    print(f"Model loaded successfully from {MODEL_PATH}")
 else:
     model = None
-    print("Warning: Model not found. Run model_trainer.py first.")
+    print(f"Warning: Model not found at {MODEL_PATH}")
 
 def get_tomorrow_forecast():
     """Fetches next day weather forecast from OpenWeatherMap"""
@@ -112,6 +114,14 @@ def predict():
 
         # 3. Log Prediction Result
         prediction = model.predict(input_data)[0]
+        
+        # Add slight randomness if using mock data (to avoid "stuck" feeling)
+        if weather.get('is_mock'):
+            import random
+            variation = random.uniform(-0.05, 0.05)
+            prediction += variation
+            print(f"[RANDOM] Added {round(variation, 3)} kWh noise to mock prediction")
+
         print(f"[STEP 3] AI Prediction complete!")
         print(f"   - Result: {round(float(prediction), 4)} kWh")
         print("="*50 + "\n")
@@ -136,4 +146,4 @@ def health():
     return jsonify({'status': 'healthy', 'model_loaded': model is not None})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False) # Turned off debug for cleaner log production
+    app.run(host='0.0.0.0', port=5001, debug=False)

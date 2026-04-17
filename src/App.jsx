@@ -365,12 +365,18 @@ function App() {
               <Cpu className="text-accent" size={18} />
               AI Analytics
             </div>
-            <button 
-              onClick={() => fetchAiPrediction()} 
-              className="p-1 hover:bg-white/10 rounded-full transition-colors"
-              title="Refresh AI"
+            <button
+              onClick={() => fetchAiPrediction()}
+              disabled={isAiLoading}
+              className="ai-refresh-btn"
+              title="Refresh AI Prediction"
             >
-              <RefreshCw className={`text-muted ${isAiLoading ? 'animate-spin' : ''}`} size={14} />
+              <RefreshCw
+                size={12}
+                className={isAiLoading ? 'spin-animation' : ''}
+                style={{ transition: 'transform 0.3s ease' }}
+              />
+              <span>{isAiLoading ? 'Analyzing...' : 'Refresh'}</span>
             </button>
           </div>
           <div className="card-value">
