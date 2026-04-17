@@ -40,6 +40,7 @@ function App() {
   const [error, setError] = useState(null);
   const [aiPrediction, setAiPrediction] = useState(null);
   const [forecastWeather, setForecastWeather] = useState(null);
+  const [isHardwareOffline, setIsHardwareOffline] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   // Fallback to mock data if Firebase fails or is not configured
@@ -155,6 +156,15 @@ function App() {
       setLoading(false);
     }
   }, [user]);
+
+  // Real-time Heartbeat Checker (runs every 5 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const isOffline = Math.floor(Date.now() / 1000) - (data.last_seen || 0) > 30;
+      setIsHardwareOffline(isOffline);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [data.last_seen]);
 
   const toggleLoad = (status) => {
     try {
@@ -325,8 +335,7 @@ function App() {
           </div>
           <div className="card-value">
             <div className="status-indicator">
-              {/* Check if last_seen is older than 30 seconds */}
-              {Math.floor(Date.now() / 1000) - (data.last_seen || 0) > 30 ? (
+              {isHardwareOffline ? (
                 <>
                   <div className="status-dot offline"></div>
                   <span className="text-gray-400">OFFLINE</span>
@@ -342,7 +351,7 @@ function App() {
             </div>
           </div>
           <p className="text-muted text-sm mt-2">
-            {Math.floor(Date.now() / 1000) - (data.last_seen || 0) > 30 
+            {isHardwareOffline 
               ? "Hardware connection lost" 
               : `Load is currently ${data.load_status.toLowerCase()}`}
           </p>
@@ -441,32 +450,24 @@ function App() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        {/* Calculate offline status for disabling buttons */}
-        {(() => {
-          const isOffline = Math.floor(Date.now() / 1000) - (data.last_seen || 0) > 30;
-          return (
-            <>
-              <button
-                className="btn-premium btn-on"
-                onClick={() => toggleLoad('ON')}
-                disabled={isOffline || data.load_status === 'ON'}
-                style={{ opacity: (isOffline || data.load_status === 'ON') ? 0.5 : 1, cursor: isOffline ? 'not-allowed' : 'pointer' }}
-              >
-                <Power size={20} />
-                Restore Power
-              </button>
-              <button
-                className="btn-premium btn-off"
-                onClick={() => toggleLoad('OFF')}
-                disabled={isOffline || data.load_status === 'OFF'}
-                style={{ opacity: (isOffline || data.load_status === 'OFF') ? 0.5 : 1, cursor: isOffline ? 'not-allowed' : 'pointer' }}
-              >
-                <Power size={20} />
-                Emergency Cut
-              </button>
-            </>
-          );
-        })()}
+        <button
+          className="btn-premium btn-on"
+          onClick={() => toggleLoad('ON')}
+          disabled={isHardwareOffline || data.load_status === 'ON'}
+          style={{ opacity: (isHardwareOffline || data.load_status === 'ON') ? 0.5 : 1, cursor: isHardwareOffline ? 'not-allowed' : 'pointer' }}
+        >
+          <Power size={20} />
+          Restore Power
+        </button>
+        <button
+          className="btn-premium btn-off"
+          onClick={() => toggleLoad('OFF')}
+          disabled={isHardwareOffline || data.load_status === 'OFF'}
+          style={{ opacity: (isHardwareOffline || data.load_status === 'OFF') ? 0.5 : 1, cursor: isHardwareOffline ? 'not-allowed' : 'pointer' }}
+        >
+          <Power size={20} />
+          Emergency Cut
+        </button>
       </motion.div>
 
       <footer className="mt-12 text-center text-muted text-sm pb-8">
