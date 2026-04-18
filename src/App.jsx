@@ -479,7 +479,7 @@ function App() {
           style={{ opacity: (isHardwareOffline || data.load_status === 'ON') ? 0.5 : 1, cursor: isHardwareOffline ? 'not-allowed' : 'pointer' }}
         >
           <Power size={20} />
-          Restore Power
+          Restore  Power
         </button>
         <button
           className="btn-premium btn-off"
