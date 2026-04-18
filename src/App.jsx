@@ -352,8 +352,8 @@ function App() {
             </div>
           </div>
           <p className="text-muted text-sm mt-2">
-            {isHardwareOffline 
-              ? "Hardware connection lost" 
+            {isHardwareOffline
+              ? "Hardware connection lost"
               : `Load is currently ${data.load_status.toLowerCase()}`}
           </p>
         </motion.div>
@@ -410,7 +410,7 @@ function App() {
                   <span className="text-accent">{forecastWeather.humidity}%</span>
                 </div>
                 <p className="text-[10px] text-muted mt-2 border-t border-white/5 pt-1 italic">
-                   *Based on OpenWeatherMap for Aligarh
+                  *Based on OpenWeatherMap for Aligarh
                 </p>
               </div>
             ) : (
