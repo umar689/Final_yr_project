@@ -146,7 +146,7 @@ h1.main-title {
 
 .card-title {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
   margin-bottom: 1.5rem;
@@ -154,6 +154,11 @@ h1.main-title {
   align-items: center;
   gap: 0.75rem;
   font-weight: 600;
+}
+
+.card-title svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .card-value {
@@ -499,6 +504,10 @@ h1.main-title {
 .text-sm { font-size: 0.875rem; }
 .mt-12 { margin-top: 3rem; }
 .pb-8 { padding-bottom: 2rem; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 0.5rem; }
 
 /* ─── AI Refresh Button ─────────────────────────────── */
 .ai-refresh-btn {
