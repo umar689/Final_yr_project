@@ -172,7 +172,7 @@ function App() {
       if (status === 'OFF') {
         // Emergency Cut: Force both status and emergency flag
         set(ref(db, 'emergency_cut'), true);
-        set(ref(db, 'load_status'), 'OFF');
+        set(ref(db, 'load_status'), 'EMERGENCY_OFF');
       } else {
         // Restore Power: Clear emergency flag
         set(ref(db, 'emergency_cut'), false);
@@ -476,7 +476,10 @@ function App() {
           className="btn-premium btn-on"
           onClick={() => toggleLoad('ON')}
           disabled={isHardwareOffline || data.load_status === 'ON'}
-          style={{ opacity: (isHardwareOffline || data.load_status === 'ON') ? 0.5 : 1, cursor: isHardwareOffline ? 'not-allowed' : 'pointer' }}
+          style={{ 
+            opacity: (isHardwareOffline || data.load_status === 'ON') ? 0.5 : 1, 
+            cursor: (isHardwareOffline || data.load_status === 'ON') ? 'not-allowed' : 'pointer' 
+          }}
         >
           <Power size={20} />
           Restore Power
@@ -484,8 +487,11 @@ function App() {
         <button
           className="btn-premium btn-off"
           onClick={() => toggleLoad('OFF')}
-          disabled={isHardwareOffline || data.load_status === 'OFF'}
-          style={{ opacity: (isHardwareOffline || data.load_status === 'OFF') ? 0.5 : 1, cursor: isHardwareOffline ? 'not-allowed' : 'pointer' }}
+          disabled={isHardwareOffline || data.load_status === 'OFF' || data.load_status === 'EMERGENCY_OFF'}
+          style={{ 
+            opacity: (isHardwareOffline || data.load_status === 'OFF' || data.load_status === 'EMERGENCY_OFF') ? 0.5 : 1, 
+            cursor: (isHardwareOffline || data.load_status === 'OFF' || data.load_status === 'EMERGENCY_OFF') ? 'not-allowed' : 'pointer' 
+          }}
         >
           <Power size={20} />
           Emergency Cut
